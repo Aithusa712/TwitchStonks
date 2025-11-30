@@ -5,10 +5,11 @@ class Settings(BaseSettings):
     twitch_bot_username: str
     twitch_oauth_token: str
     twitch_channel: str
-    stonks_keyword: str = "STONKS"
+    stonks_up_keyword: str = "STONKS"
+    stonks_down_keyword: str = "STONKS DOWN"
     mongo_uri: str = "mongodb://mongo:27017"
     mongo_db_name: str = "stonksdb"
-    tick_interval_seconds: float = 2.0
+    tick_interval_minutes: float = 30.0
     initial_price: float = 100.0
 
     model_config = SettingsConfigDict(

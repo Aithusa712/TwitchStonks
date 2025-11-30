@@ -1,25 +1,38 @@
 import asyncio
 import contextlib
 import json
+import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 
 from fastapi import WebSocket
 from motor.motor_asyncio import AsyncIOMotorCollection
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class PricePoint:
     timestamp: datetime
     price: float
-    count: int
+    up_count: int
+    down_count: int
+
+    def to_db(self) -> Dict[str, object]:
+        return {
+            "timestamp": self.timestamp,
+            "price": self.price,
+            "up_count": self.up_count,
+            "down_count": self.down_count,
+        }
 
     def to_json(self) -> Dict[str, object]:
         return {
             "timestamp": self.timestamp.replace(tzinfo=timezone.utc).isoformat(),
             "price": self.price,
-            "count": self.count,
+            "up_count": self.up_count,
+            "down_count": self.down_count,
         }
 
 
@@ -27,26 +40,56 @@ class StonksState:
     def __init__(
         self,
         collection: AsyncIOMotorCollection,
-        keyword: str,
-        tick_interval: float = 2.0,
+        up_keyword: str,
+        down_keyword: str,
+        tick_interval_minutes: float = 30.0,
         initial_price: float = 100.0,
     ):
         self.collection = collection
-        self.keyword = keyword.lower()
-        self.tick_interval = tick_interval
+        self.up_keyword = up_keyword.lower()
+        self.down_keyword = down_keyword.lower()
+        self.tick_interval_minutes = tick_interval_minutes
+        self.tick_interval_seconds = tick_interval_minutes * 60
         self.current_price = initial_price
-        self._counter = 0
+        self._up_counter = 0
+        self._down_counter = 0
         self._ticker_task: asyncio.Task | None = None
         self._running = False
         self._websockets: List[WebSocket] = []
+        self.next_tick_at = datetime.now(timezone.utc) + timedelta(
+            seconds=self.tick_interval_seconds
+        )
+        self.twitch_connected = False
 
-    def increment(self) -> None:
-        self._counter += 1
+    def increment_up(self) -> None:
+        self._up_counter += 1
+        logger.debug("Incremented UP counter: %s", self._up_counter)
+
+    def increment_down(self) -> None:
+        self._down_counter += 1
+        logger.debug("Incremented DOWN counter: %s", self._down_counter)
+
+    def handle_message(self, message: str) -> None:
+        lowered = message.lower()
+        matched = False
+        if self.up_keyword in lowered:
+            self.increment_up()
+            matched = True
+        if self.down_keyword in lowered:
+            self.increment_down()
+            matched = True
+        if matched:
+            logger.info(
+                "Received twitch message affecting counters (up=%s, down=%s)",
+                self._up_counter,
+                self._down_counter,
+            )
 
     async def start(self) -> None:
         if self._running:
             return
         self._running = True
+        logger.info("Starting ticker loop with interval %.2f minutes", self.tick_interval_minutes)
         self._ticker_task = asyncio.create_task(self._ticker_loop())
 
     async def stop(self) -> None:
@@ -61,24 +104,44 @@ class StonksState:
 
     async def _ticker_loop(self) -> None:
         while self._running:
-            await asyncio.sleep(self.tick_interval)
-            await self._tick()
+            await asyncio.sleep(self.tick_interval_seconds)
+            try:
+                await self._tick()
+            except Exception as exc:  # pragma: no cover - safety net
+                logger.error("Ticker execution failed: %s", exc)
 
     async def _tick(self) -> None:
-        count = self._counter
-        self._counter = 0
-        price_change = count * 0.5 - 0.2
+        up_count = self._up_counter
+        down_count = self._down_counter
+        self._up_counter = 0
+        self._down_counter = 0
+        price_change = (up_count * 0.5) - (down_count * 0.5)
         self.current_price = max(0.0, self.current_price + price_change)
         point = PricePoint(
             timestamp=datetime.now(timezone.utc),
             price=self.current_price,
-            count=count,
+            up_count=up_count,
+            down_count=down_count,
         )
-        await self.collection.insert_one(point.to_json())
+        self.next_tick_at = datetime.now(timezone.utc) + timedelta(
+            seconds=self.tick_interval_seconds
+        )
+        await self.collection.insert_one(point.to_db())
+        logger.info(
+            "Ticker executed: price=%.2f, up_count=%s, down_count=%s",
+            self.current_price,
+            up_count,
+            down_count,
+        )
         await self._broadcast(point)
 
     async def _broadcast(self, point: PricePoint) -> None:
-        message = json.dumps(point.to_json())
+        payload = {
+            **point.to_json(),
+            "next_tick_at": self.next_tick_at.isoformat(),
+            "twitch_connected": self.twitch_connected,
+        }
+        message = json.dumps(payload)
         disconnected: List[WebSocket] = []
         for ws in self._websockets:
             try:
@@ -95,7 +158,29 @@ class StonksState:
         latest = await self.collection.find_one(sort=[("timestamp", -1)])
         if latest:
             latest.pop("_id", None)
-            await websocket.send_text(json.dumps(latest))
+            latest_ts = latest.get("timestamp")
+            if isinstance(latest_ts, str):
+                ts_value = datetime.fromisoformat(latest_ts)
+            elif latest_ts is None:
+                ts_value = datetime.now(timezone.utc)
+            else:
+                ts_value = latest_ts
+            if ts_value.tzinfo is None:
+                ts_value = ts_value.replace(tzinfo=timezone.utc)
+            latest_payload = {
+                "timestamp": ts_value.isoformat(),
+                "price": latest.get("price", 0.0),
+                "up_count": latest.get("up_count", 0),
+                "down_count": latest.get("down_count", 0),
+                "next_tick_at": self.next_tick_at.isoformat(),
+                "twitch_connected": self.twitch_connected,
+            }
+            await websocket.send_text(json.dumps(latest_payload))
 
     def keyword_in_message(self, message: str) -> bool:
-        return self.keyword in message.lower()
+        lowered = message.lower()
+        return self.up_keyword in lowered or self.down_keyword in lowered
+
+    def set_twitch_status(self, connected: bool) -> None:
+        self.twitch_connected = connected
+        logger.info("Twitch connection status changed: %s", connected)
