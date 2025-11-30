@@ -89,6 +89,24 @@ class StonksState:
     async def start(self) -> None:
         if self._running:
             return
+        latest = await self.collection.find_one(sort=[("timestamp", -1)])
+        if latest and "price" in latest:
+            try:
+                self.current_price = float(latest["price"])
+                logger.info(
+                    "Starting with previous price from database: %.2f",
+                    self.current_price,
+                )
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Previous price found in database but invalid, using initial price: %.2f",
+                    self.current_price,
+                )
+        else:
+            logger.info(
+                "No previous price found in database, using initial price: %.2f",
+                self.current_price,
+            )
         self._running = True
         logger.info("Starting ticker loop with interval %.2f minutes", self.tick_interval_minutes)
         self._ticker_task = asyncio.create_task(self._ticker_loop())
@@ -116,6 +134,12 @@ class StonksState:
         down_count = self._down_counter
         self._up_counter = 0
         self._down_counter = 0
+        if up_count == 0 and down_count == 0:
+            self.next_tick_at = datetime.now(timezone.utc) + timedelta(
+                seconds=self.tick_interval_seconds
+            )
+            logger.info("Ticker skipped due to no activity (up=0, down=0)")
+            return
         price_change = (up_count * 0.5) - (down_count * 0.5)
         self.current_price = max(0.0, self.current_price + price_change)
         point = PricePoint(
