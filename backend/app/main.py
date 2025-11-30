@@ -111,6 +111,7 @@ async def status() -> dict[str, Any]:
         "next_tick_at": state.next_tick_at.isoformat(),
         "current_price": state.current_price,
         "tick_interval_minutes": state.tick_interval_minutes,
+        "twitch_channel": settings.twitch_channel,
     }
 
 

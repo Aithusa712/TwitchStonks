@@ -28,6 +28,9 @@ function App() {
   const [wsConnected, setWsConnected] = useState(false)
   const [twitchConnected, setTwitchConnected] = useState(false)
   const [streamLive, setStreamLive] = useState(false)
+  const [twitchChannel, setTwitchChannel] = useState(
+    import.meta.env.VITE_TWITCH_CHANNEL || ''
+  )
   const [nextTickAt, setNextTickAt] = useState(null)
   const [tickIntervalMinutes, setTickIntervalMinutes] = useState(30)
   const [latestLivePoint, setLatestLivePoint] = useState(null)
@@ -60,6 +63,9 @@ function App() {
       setTwitchConnected(Boolean(status.twitch_connected))
       setStreamLive(Boolean(status.stream_live))
       setNextTickAt(status.next_tick_at ? new Date(status.next_tick_at) : null)
+      if (status.twitch_channel) {
+        setTwitchChannel(status.twitch_channel)
+      }
       if (status.tick_interval_minutes) {
         setTickIntervalMinutes(status.tick_interval_minutes)
       }
@@ -160,6 +166,11 @@ function App() {
                 label={streamLive ? 'Channel Live' : 'Channel Offline'}
                 color={streamLive ? 'info' : 'default'}
                 icon={<LiveTvIcon />}
+                clickable={Boolean(twitchChannel)}
+                component={twitchChannel ? 'a' : 'div'}
+                href={twitchChannel ? `https://twitch.tv/${twitchChannel}` : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
                 variant={streamLive ? 'filled' : 'outlined'}
               />
               <Tooltip title="Toggle theme">
