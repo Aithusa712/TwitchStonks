@@ -11,7 +11,12 @@ class Settings(BaseSettings):
     tick_interval_seconds: float = 2.0
     initial_price: float = 100.0
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        env_ignore_empty=True,
+    )
 
 
 settings = Settings()
