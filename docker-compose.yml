@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      - TWITCH_BOT_USERNAME=${TWITCH_BOT_USERNAME}
+      - TWITCH_OAUTH_TOKEN=${TWITCH_OAUTH_TOKEN}
+      - TWITCH_CHANNEL=${TWITCH_CHANNEL}
+      - STONKS_KEYWORD=${STONKS_KEYWORD}
+      - MONGO_URI=${MONGO_URI}
+      - MONGO_DB_NAME=${MONGO_DB_NAME}
+      - TICK_INTERVAL_SECONDS=${TICK_INTERVAL_SECONDS}
+      - INITIAL_PRICE=${INITIAL_PRICE}
+    depends_on:
+      - mongo
+    ports:
+      - "8000:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    env_file: .env
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
