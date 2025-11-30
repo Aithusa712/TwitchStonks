@@ -150,7 +150,7 @@ function App() {
                 </Typography>
               </Stack>
             </Stack>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={2} alignItems="center">
               <Chip
                 label={wsConnected ? 'WebSocket Live' : 'WebSocket Offline'}
                 color={wsConnected ? 'success' : 'default'}
@@ -172,6 +172,7 @@ function App() {
                 target="_blank"
                 rel="noopener noreferrer"
                 variant={streamLive ? 'filled' : 'outlined'}
+                
               />
               <Tooltip title="Toggle theme">
                 <IconButton color="inherit" onClick={() => setDarkMode((prev) => !prev)}>
