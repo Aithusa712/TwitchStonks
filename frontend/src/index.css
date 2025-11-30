@@ -1,0 +1,12 @@
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: #e2e8f0;
+}
+
+a {
+  color: inherit;
+}
