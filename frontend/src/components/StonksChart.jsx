@@ -1,23 +1,46 @@
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
+import { alpha, Box, LinearProgress, useTheme } from '@mui/material'
+import { LineChart } from '@mui/x-charts/LineChart'
 
-function StonksChart({ data }) {
-  const formatted = data.map((point) => ({
+function StonksChart({ data, loading }) {
+  const theme = useTheme()
+
+  const chartData = data.map((point) => ({
     ...point,
-    timeLabel: point.timestamp instanceof Date ? point.timestamp.toLocaleTimeString() : point.timestamp,
+    timestamp: point.timestamp instanceof Date ? point.timestamp : new Date(point.timestamp),
   }))
 
   return (
-    <div style={{ width: '100%', height: 400 }}>
-      <ResponsiveContainer>
-        <LineChart data={formatted} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="timeLabel" tick={{ fontSize: 12 }} />
-          <YAxis domain={['auto', 'auto']} tick={{ fontSize: 12 }} />
-          <Tooltip />
-          <Line type="monotone" dataKey="price" stroke="#2563eb" strokeWidth={3} dot={false} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <Box sx={{ position: 'relative' }}>
+      {loading && <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1 }} />}
+      <LineChart
+        xAxis={[
+          {
+            dataKey: 'timestamp',
+            scaleType: 'time',
+            valueFormatter: (value) => new Date(value).toLocaleString(),
+          },
+        ]}
+        yAxis={[{ label: 'Price' }]}
+        series={[
+          {
+            dataKey: 'price',
+            label: 'Price',
+            color: theme.palette.primary.main,
+            showMark: false,
+          },
+        ]}
+        height={420}
+        dataset={chartData}
+        sx={{
+          '& .MuiLineElement-root': {
+            filter: 'drop-shadow(0px 8px 12px rgba(124, 58, 237, 0.35))',
+          },
+          '& .MuiAreaElement-root': {
+            fill: alpha(theme.palette.primary.main, 0.06),
+          },
+        }}
+      />
+    </Box>
   )
 }
 

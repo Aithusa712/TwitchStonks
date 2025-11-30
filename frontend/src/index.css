@@ -1,10 +1,10 @@
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
 }
 
 body {
   margin: 0;
-  background: #e2e8f0;
+  background: transparent;
 }
 
 a {
