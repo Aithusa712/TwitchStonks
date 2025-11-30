@@ -28,6 +28,7 @@ function App() {
   const [twitchConnected, setTwitchConnected] = useState(false)
   const [nextTickAt, setNextTickAt] = useState(null)
   const [tickIntervalMinutes, setTickIntervalMinutes] = useState(30)
+  const [latestLivePoint, setLatestLivePoint] = useState(null)
   const [darkMode, setDarkMode] = useState(true)
 
   const wsUrl = useMemo(() => {
@@ -82,7 +83,9 @@ function App() {
     ws.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data)
-        setDataPoints((prev) => [...prev, { ...payload, timestamp: new Date(payload.timestamp) }])
+        const livePoint = { ...payload, timestamp: new Date(payload.timestamp) }
+        setDataPoints((prev) => [...prev, livePoint])
+        setLatestLivePoint(livePoint)
         if (payload.next_tick_at) {
           setNextTickAt(new Date(payload.next_tick_at))
         }
@@ -104,8 +107,11 @@ function App() {
   const changePercent = previous && previous.price
     ? ((price - previous.price) / previous.price) * 100
     : 0
-  const upMentions = latest?.up_count ?? 0
-  const downMentions = latest?.down_count ?? 0
+  const liveWindowMs = tickIntervalMinutes * 60 * 1000
+  const livePointIsCurrent =
+    latestLivePoint && Date.now() - latestLivePoint.timestamp.getTime() <= liveWindowMs
+  const upMentions = livePointIsCurrent ? latestLivePoint.up_count ?? 0 : 0
+  const downMentions = livePointIsCurrent ? latestLivePoint.down_count ?? 0 : 0
 
   const background = darkMode
     ? 'linear-gradient(180deg, #0b1021 0%, #0f172a 60%, #0b1021 100%)'
