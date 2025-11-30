@@ -6,6 +6,7 @@ import '@fontsource/roboto/700.css'
 import { AppBar, Box, Chip, Container, CssBaseline, Divider, Grid, IconButton, Skeleton, Stack, Toolbar, Tooltip, Typography } from '@mui/material'
 import SignalCellularAltIcon from '@mui/icons-material/SignalCellularAlt'
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports'
+import LiveTvIcon from '@mui/icons-material/LiveTv'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
 
@@ -26,6 +27,7 @@ function App() {
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [wsConnected, setWsConnected] = useState(false)
   const [twitchConnected, setTwitchConnected] = useState(false)
+  const [streamLive, setStreamLive] = useState(false)
   const [nextTickAt, setNextTickAt] = useState(null)
   const [tickIntervalMinutes, setTickIntervalMinutes] = useState(30)
   const [latestLivePoint, setLatestLivePoint] = useState(null)
@@ -56,6 +58,7 @@ function App() {
       const response = await fetch(`${apiBaseUrl}/status`)
       const status = await response.json()
       setTwitchConnected(Boolean(status.twitch_connected))
+      setStreamLive(Boolean(status.stream_live))
       setNextTickAt(status.next_tick_at ? new Date(status.next_tick_at) : null)
       if (status.tick_interval_minutes) {
         setTickIntervalMinutes(status.tick_interval_minutes)
@@ -83,14 +86,19 @@ function App() {
     ws.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data)
-        const livePoint = { ...payload, timestamp: new Date(payload.timestamp) }
-        setDataPoints((prev) => [...prev, livePoint])
-        setLatestLivePoint(livePoint)
+        if (payload.twitch_connected !== undefined) {
+          setTwitchConnected(Boolean(payload.twitch_connected))
+        }
+        if (payload.stream_live !== undefined) {
+          setStreamLive(Boolean(payload.stream_live))
+        }
         if (payload.next_tick_at) {
           setNextTickAt(new Date(payload.next_tick_at))
         }
-        if (payload.twitch_connected !== undefined) {
-          setTwitchConnected(Boolean(payload.twitch_connected))
+        if (payload.timestamp) {
+          const livePoint = { ...payload, timestamp: new Date(payload.timestamp) }
+          setDataPoints((prev) => [...prev, livePoint])
+          setLatestLivePoint(livePoint)
         }
       } catch (error) {
         console.error('Failed to parse websocket message', error)
@@ -147,6 +155,12 @@ function App() {
                 color={twitchConnected ? 'success' : 'warning'}
                 icon={<SportsEsportsIcon />}
                 variant={twitchConnected ? 'filled' : 'outlined'}
+              />
+              <Chip
+                label={streamLive ? 'Channel Live' : 'Channel Offline'}
+                color={streamLive ? 'info' : 'default'}
+                icon={<LiveTvIcon />}
+                variant={streamLive ? 'filled' : 'outlined'}
               />
               <Tooltip title="Toggle theme">
                 <IconButton color="inherit" onClick={() => setDarkMode((prev) => !prev)}>
