@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     twitch_bot_username: str
     twitch_oauth_token: str
     twitch_channel: str
+    twitch_client_id: str
+    twitch_client_secret: str
     stonks_up_keyword: str = "STONKS"
     stonks_down_keyword: str = "STONKS DOWN"
     mongo_uri: str = "mongodb://mongo:27017"
