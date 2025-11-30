@@ -11,6 +11,7 @@ from .config import settings
 from .db import close_client, get_database
 from .stonks_state import StonksState
 from .twitch_client import TwitchClient
+from .twitch_helix_client import TwitchHelixClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -63,19 +64,33 @@ async def startup_event() -> None:
         else None,
         on_status_change=state.set_twitch_status,
     )
+    helix = TwitchHelixClient(
+        client_id=settings.twitch_client_id,
+        client_secret=settings.twitch_client_secret,
+        channel=settings.twitch_channel,
+        on_status_change=state.set_stream_status,
+        poll_interval_seconds=180,
+    )
     await state.start()
     try:
         await twitch.start()
     except Exception as exc:  # pragma: no cover - defensive
         logger.error("Failed to start Twitch client: %s", exc)
+    try:
+        await helix.start()
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("Failed to start Twitch Helix client: %s", exc)
     app.state.stonks_state = state
     app.state.twitch_client = twitch
+    app.state.twitch_helix_client = helix
 
 
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
     state: StonksState = app.state.stonks_state
     twitch: TwitchClient = app.state.twitch_client
+    helix: TwitchHelixClient = app.state.twitch_helix_client
+    await helix.stop()
     await twitch.stop()
     await state.stop()
     close_client()
@@ -92,9 +107,11 @@ async def status() -> dict[str, Any]:
     twitch: TwitchClient = app.state.twitch_client
     return {
         "twitch_connected": twitch.connected,
+        "stream_live": state.stream_live,
         "next_tick_at": state.next_tick_at.isoformat(),
         "current_price": state.current_price,
         "tick_interval_minutes": state.tick_interval_minutes,
+        "twitch_channel": settings.twitch_channel,
     }
 
 

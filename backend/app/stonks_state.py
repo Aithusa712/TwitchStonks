@@ -60,6 +60,7 @@ class StonksState:
             seconds=self.tick_interval_seconds
         )
         self.twitch_connected = False
+        self.stream_live = False
 
     def increment_up(self) -> None:
         self._up_counter += 1
@@ -140,7 +141,21 @@ class StonksState:
             **point.to_json(),
             "next_tick_at": self.next_tick_at.isoformat(),
             "twitch_connected": self.twitch_connected,
+            "stream_live": self.stream_live,
+            "type": "tick",
         }
+        await self._send_payload(payload)
+
+    async def _broadcast_status_update(self) -> None:
+        payload = {
+            "type": "status",
+            "twitch_connected": self.twitch_connected,
+            "stream_live": self.stream_live,
+            "next_tick_at": self.next_tick_at.isoformat(),
+        }
+        await self._send_payload(payload)
+
+    async def _send_payload(self, payload: Dict[str, object]) -> None:
         message = json.dumps(payload)
         disconnected: List[WebSocket] = []
         for ws in self._websockets:
@@ -174,6 +189,7 @@ class StonksState:
                 "down_count": latest.get("down_count", 0),
                 "next_tick_at": self.next_tick_at.isoformat(),
                 "twitch_connected": self.twitch_connected,
+                "stream_live": self.stream_live,
             }
             await websocket.send_text(json.dumps(latest_payload))
 
@@ -182,5 +198,15 @@ class StonksState:
         return self.up_keyword in lowered or self.down_keyword in lowered
 
     def set_twitch_status(self, connected: bool) -> None:
+        if self.twitch_connected == connected:
+            return
         self.twitch_connected = connected
         logger.info("Twitch connection status changed: %s", connected)
+        asyncio.create_task(self._broadcast_status_update())
+
+    def set_stream_status(self, is_live: bool) -> None:
+        if self.stream_live == is_live:
+            return
+        self.stream_live = is_live
+        logger.info("Twitch stream live status changed: %s", is_live)
+        asyncio.create_task(self._broadcast_status_update())
