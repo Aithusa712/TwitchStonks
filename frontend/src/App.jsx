@@ -31,6 +31,8 @@ function App() {
   const [twitchChannel, setTwitchChannel] = useState(
     import.meta.env.VITE_TWITCH_CHANNEL || ''
   )
+  const [upKeyword, setUpKeyword] = useState('Up')
+  const [downKeyword, setDownKeyword] = useState('Down')
   const [nextTickAt, setNextTickAt] = useState(null)
   const [tickIntervalMinutes, setTickIntervalMinutes] = useState(30)
   const [latestLivePoint, setLatestLivePoint] = useState(null)
@@ -68,6 +70,12 @@ function App() {
       }
       if (status.tick_interval_minutes) {
         setTickIntervalMinutes(status.tick_interval_minutes)
+      }
+      if (status.up_keyword) {
+        setUpKeyword(status.up_keyword)
+      }
+      if (status.down_keyword) {
+        setDownKeyword(status.down_keyword)
       }
     } catch (error) {
       console.error('Failed to load status', error)
@@ -184,14 +192,28 @@ function App() {
         </AppBar>
 
         <Container maxWidth="lg" sx={{ py: 4 }}>
-          <PriceDisplay price={price} changePercent={changePercent} />
+          <PriceDisplay
+            price={price}
+            changePercent={changePercent}
+            channelName={twitchChannel}
+          />
 
           <Grid container spacing={3} sx={{ mb: 2 }}>
             <Grid item xs={12} md={3}>
-              <StatsCard title="UP Mentions" value={upMentions} description="Last 30 min window" color="success.main" />
+              <StatsCard
+                title={`${upKeyword} Mentions`}
+                value={upMentions}
+                description="Last 30 min window"
+                color="success.main"
+              />
             </Grid>
             <Grid item xs={12} md={3}>
-              <StatsCard title="DOWN Mentions" value={downMentions} description="Last 30 min window" color="error.main" />
+              <StatsCard
+                title={`${downKeyword} Mentions`}
+                value={downMentions}
+                description="Last 30 min window"
+                color="error.main"
+              />
             </Grid>
             <Grid item xs={12} md={3}>
               <StatsCard
