@@ -1,8 +1,8 @@
 import { ToggleButton, ToggleButtonGroup } from '@mui/material'
 
 const RANGES = [
-  { value: '3days', label: '3 Days' }, 
   { value: 'today', label: 'Today' },
+  { value: '3days', label: '3 Days' },
   { value: '7days', label: '7 Days' },
   { value: '30days', label: '30 Days' },
   { value: '3months', label: '3 Months' },
