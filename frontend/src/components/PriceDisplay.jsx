@@ -27,7 +27,7 @@ function PriceDisplay({ price, changePercent, channelName }) {
               ${price.toFixed(2)}
             </Typography>
             <Typography variant="body2" color="rgba(255,255,255,0.85)">
-              Updated every 30 minutes from Twitch chat momentum.
+              Updated every 30 minutes from Twitch chat.
             </Typography>
           </Stack>
           <Stack alignItems={{ xs: 'flex-start', sm: 'flex-end' }} spacing={0.5}>
