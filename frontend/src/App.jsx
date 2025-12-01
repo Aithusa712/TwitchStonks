@@ -171,6 +171,16 @@ function App() {
                   Twitch Stonks
                 </Typography>
               </Stack>
+              {isMobile && (
+                <IconButton
+                  aria-label="Open status menu"
+                  color="inherit"
+                  onClick={handleMenuOpen}
+                  sx={{ ml: 'auto' }}
+                >
+                  <MoreVertIcon />
+                </IconButton>
+              )}
             </Stack>
             {isMobile && (
               <IconButton
