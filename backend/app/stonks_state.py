@@ -65,10 +65,12 @@ class StonksState:
     def increment_up(self) -> None:
         self._up_counter += 1
         logger.debug("Incremented UP counter: %s", self._up_counter)
+        asyncio.create_task(self._broadcast_live_counters())
 
     def increment_down(self) -> None:
         self._down_counter += 1
         logger.debug("Incremented DOWN counter: %s", self._down_counter)
+        asyncio.create_task(self._broadcast_live_counters())
 
     def handle_message(self, message: str) -> None:
         lowered = message.lower()
@@ -159,6 +161,7 @@ class StonksState:
             down_count,
         )
         await self._broadcast(point)
+        await self._broadcast_live_counters()
 
     async def _broadcast(self, point: PricePoint) -> None:
         payload = {
@@ -175,6 +178,15 @@ class StonksState:
             "type": "status",
             "twitch_connected": self.twitch_connected,
             "stream_live": self.stream_live,
+            "next_tick_at": self.next_tick_at.isoformat(),
+        }
+        await self._send_payload(payload)
+
+    async def _broadcast_live_counters(self) -> None:
+        payload = {
+            "type": "live_counts",
+            "up_count": self._up_counter,
+            "down_count": self._down_counter,
             "next_tick_at": self.next_tick_at.isoformat(),
         }
         await self._send_payload(payload)
@@ -216,6 +228,16 @@ class StonksState:
                 "stream_live": self.stream_live,
             }
             await websocket.send_text(json.dumps(latest_payload))
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "live_counts",
+                    "up_count": self._up_counter,
+                    "down_count": self._down_counter,
+                    "next_tick_at": self.next_tick_at.isoformat(),
+                }
+            )
+        )
 
     def keyword_in_message(self, message: str) -> bool:
         lowered = message.lower()

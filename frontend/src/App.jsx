@@ -35,7 +35,7 @@ function App() {
   const [downKeyword, setDownKeyword] = useState('Down')
   const [nextTickAt, setNextTickAt] = useState(null)
   const [tickIntervalMinutes, setTickIntervalMinutes] = useState(30)
-  const [latestLivePoint, setLatestLivePoint] = useState(null)
+  const [liveCounts, setLiveCounts] = useState({ up_count: 0, down_count: 0 })
   const [darkMode, setDarkMode] = useState(true)
 
   const wsUrl = useMemo(() => {
@@ -109,10 +109,15 @@ function App() {
         if (payload.next_tick_at) {
           setNextTickAt(new Date(payload.next_tick_at))
         }
-        if (payload.timestamp) {
+        if (payload.type === 'tick' && payload.timestamp) {
           const livePoint = { ...payload, timestamp: new Date(payload.timestamp) }
           setDataPoints((prev) => [...prev, livePoint])
-          setLatestLivePoint(livePoint)
+        }
+        if (payload.type === 'live_counts') {
+          setLiveCounts({
+            up_count: payload.up_count ?? 0,
+            down_count: payload.down_count ?? 0,
+          })
         }
       } catch (error) {
         console.error('Failed to parse websocket message', error)
@@ -129,11 +134,8 @@ function App() {
   const changePercent = previous && previous.price
     ? ((price - previous.price) / previous.price) * 100
     : 0
-  const liveWindowMs = tickIntervalMinutes * 60 * 1000
-  const livePointIsCurrent =
-    latestLivePoint && Date.now() - latestLivePoint.timestamp.getTime() <= liveWindowMs
-  const upMentions = livePointIsCurrent ? latestLivePoint.up_count ?? 0 : 0
-  const downMentions = livePointIsCurrent ? latestLivePoint.down_count ?? 0 : 0
+  const upMentions = liveCounts.up_count ?? 0
+  const downMentions = liveCounts.down_count ?? 0
 
   const background = darkMode
     ? 'linear-gradient(180deg, #0b1021 0%, #0f172a 60%, #0b1021 100%)'
@@ -203,7 +205,7 @@ function App() {
               <StatsCard
                 title={`${upKeyword} Mentions`}
                 value={upMentions}
-                description="Last 30 min window"
+                description={`Current ${tickIntervalMinutes}-minute window`}
                 color="success.main"
               />
             </Grid>
@@ -211,7 +213,7 @@ function App() {
               <StatsCard
                 title={`${downKeyword} Mentions`}
                 value={downMentions}
-                description="Last 30 min window"
+                description={`Current ${tickIntervalMinutes}-minute window`}
                 color="error.main"
               />
             </Grid>
