@@ -112,6 +112,8 @@ async def status() -> dict[str, Any]:
         "current_price": state.current_price,
         "tick_interval_minutes": state.tick_interval_minutes,
         "twitch_channel": settings.twitch_channel,
+        "up_keyword": settings.stonks_up_keyword,
+        "down_keyword": settings.stonks_down_keyword,
     }
 
 
