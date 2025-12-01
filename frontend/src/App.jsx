@@ -23,7 +23,7 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 function App() {
   const [dataPoints, setDataPoints] = useState([])
-  const [selectedRange, setSelectedRange] = useState('today')
+  const [selectedRange, setSelectedRange] = useState('3days')
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [wsConnected, setWsConnected] = useState(false)
   const [twitchConnected, setTwitchConnected] = useState(false)
