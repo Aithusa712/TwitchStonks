@@ -23,11 +23,12 @@ DEFAULT_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://gray-plant-0d92e610f.3.azurestaticapps.net",
 ]
 AZURE_STATIC_ORIGIN_REGEX = r"https://.*\\.azurestaticapps\\.net"
 
 app = FastAPI(title="Twitch Stonks")
-allowed_origins = settings.allowed_origins or DEFAULT_ALLOWED_ORIGINS
+allowed_origins = DEFAULT_ALLOWED_ORIGINS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
