@@ -1,5 +1,6 @@
 # Deployment Guide
 
+
 This document describes how to deploy the Twitch Stonks application to Azure using Static Web Apps for the frontend, Azure Web App for Containers for the backend, Docker Hub as the registry, and MongoDB Atlas for the database.
 
 ## Environment Variables
