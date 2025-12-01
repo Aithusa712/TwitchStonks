@@ -161,10 +161,10 @@ function App() {
               justifyContent: 'space-between',
               gap: 2,
               flexWrap: 'wrap',
-              alignItems: { xs: 'flex-start', sm: 'center' },
+              alignItems: 'center',
             }}
           >
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0 }}>
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0, flexGrow: 1 }}>
               <SignalCellularAltIcon color="primary" sx={{ fontSize: 36 }} />
               <Stack>
                 <Typography variant="h5" fontWeight={800}>
@@ -182,12 +182,22 @@ function App() {
                 </IconButton>
               )}
             </Stack>
+            {isMobile && (
+              <IconButton
+                aria-label="Open status menu"
+                color="inherit"
+                onClick={handleMenuOpen}
+                sx={{ ml: 'auto', alignSelf: 'center' }}
+              >
+                <MoreVertIcon />
+              </IconButton>
+            )}
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               spacing={1.5}
               alignItems={{ xs: 'flex-start', md: 'center' }}
               justifyContent="flex-end"
-              sx={{ minWidth: { xs: '100%', md: 'auto' }, display: { xs: 'none', md: 'flex' } }}
+              sx={{ minWidth: { xs: '100%', md: 'auto' }, display: { xs: 'none', md: 'flex' }, ml: { md: 'auto' } }}
             >
               <Chip
                 label={wsConnected ? 'WebSocket Live' : 'WebSocket Offline'}
