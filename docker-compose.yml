@@ -4,15 +4,20 @@ services:
   backend:
     build: ./backend
     env_file: .env
+    profiles: ["dev"]
     environment:
       - TWITCH_BOT_USERNAME=${TWITCH_BOT_USERNAME}
       - TWITCH_OAUTH_TOKEN=${TWITCH_OAUTH_TOKEN}
       - TWITCH_CHANNEL=${TWITCH_CHANNEL}
-      - STONKS_KEYWORD=${STONKS_KEYWORD}
+      - TWITCH_CLIENT_ID=${TWITCH_CLIENT_ID}
+      - TWITCH_CLIENT_SECRET=${TWITCH_CLIENT_SECRET}
+      - STONKS_UP_KEYWORD=${STONKS_UP_KEYWORD}
+      - STONKS_DOWN_KEYWORD=${STONKS_DOWN_KEYWORD}
       - MONGO_URI=${MONGO_URI}
       - MONGO_DB_NAME=${MONGO_DB_NAME}
-      - TICK_INTERVAL_SECONDS=${TICK_INTERVAL_SECONDS}
+      - TICK_INTERVAL_MINUTES=${TICK_INTERVAL_MINUTES}
       - INITIAL_PRICE=${INITIAL_PRICE}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     depends_on:
       - mongo
     ports:
@@ -23,6 +28,7 @@ services:
   frontend:
     build: ./frontend
     env_file: .env
+    profiles: ["dev"]
     environment:
       - VITE_API_BASE_URL=${VITE_API_BASE_URL}
     depends_on:
@@ -33,6 +39,7 @@ services:
 
   mongo:
     image: mongo:6
+    profiles: ["dev"]
     ports:
       - "27017:27017"
     volumes:

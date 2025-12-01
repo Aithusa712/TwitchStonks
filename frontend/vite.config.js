@@ -6,5 +6,10 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173
+  },
+  build: {
+    sourcemap: false,
+    target: 'es2019',
+    chunkSizeWarningLimit: 800
   }
 })

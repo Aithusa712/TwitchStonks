@@ -19,7 +19,7 @@ import getTheme from './theme'
 import { ThemeProvider } from '@mui/material/styles'
 import './App.css'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || window.location.origin).replace(/\/$/, '')
 
 function App() {
   const [dataPoints, setDataPoints] = useState([])
@@ -43,7 +43,7 @@ function App() {
       return apiBaseUrl.replace('https', 'wss') + '/ws'
     }
     return apiBaseUrl.replace('http', 'ws') + '/ws'
-  }, [])
+  }, [apiBaseUrl])
 
   const loadHistory = async (range) => {
     setLoadingHistory(true)
