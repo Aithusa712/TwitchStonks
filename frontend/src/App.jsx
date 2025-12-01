@@ -3,12 +3,13 @@ import '@fontsource/roboto/300.css'
 import '@fontsource/roboto/400.css'
 import '@fontsource/roboto/500.css'
 import '@fontsource/roboto/700.css'
-import { AppBar, Box, Chip, Container, CssBaseline, Divider, Grid, IconButton, Skeleton, Stack, Toolbar, Tooltip, Typography } from '@mui/material'
+import { AppBar, Box, Chip, Container, CssBaseline, Divider, Grid, IconButton, Menu, Skeleton, Stack, Toolbar, Tooltip, Typography, useMediaQuery } from '@mui/material'
 import SignalCellularAltIcon from '@mui/icons-material/SignalCellularAlt'
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports'
 import LiveTvIcon from '@mui/icons-material/LiveTv'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 
 import StonksChart from './components/StonksChart'
 import TimeRangeSelector from './components/TimeRangeSelector'
@@ -143,6 +144,12 @@ function App() {
     : 'linear-gradient(180deg, #f8fafc 0%, #e2e8f0 60%, #f8fafc 100%)'
 
   const muiTheme = useMemo(() => getTheme(darkMode ? 'dark' : 'light'), [darkMode])
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'))
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null)
+  const mobileMenuOpen = Boolean(menuAnchorEl)
+
+  const handleMenuOpen = (event) => setMenuAnchorEl(event.currentTarget)
+  const handleMenuClose = () => setMenuAnchorEl(null)
 
   return (
     <ThemeProvider theme={muiTheme}>
@@ -164,13 +171,23 @@ function App() {
                   Twitch Stonks
                 </Typography>
               </Stack>
+              {isMobile && (
+                <IconButton
+                  aria-label="Open status menu"
+                  color="inherit"
+                  onClick={handleMenuOpen}
+                  sx={{ ml: 'auto' }}
+                >
+                  <MoreVertIcon />
+                </IconButton>
+              )}
             </Stack>
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               spacing={1.5}
               alignItems={{ xs: 'flex-start', md: 'center' }}
               justifyContent="flex-end"
-              sx={{ minWidth: { xs: '100%', md: 'auto' } }}
+              sx={{ minWidth: { xs: '100%', md: 'auto' }, display: { xs: 'none', md: 'flex' } }}
             >
               <Chip
                 label={wsConnected ? 'WebSocket Live' : 'WebSocket Offline'}
@@ -193,7 +210,6 @@ function App() {
                 target="_blank"
                 rel="noopener noreferrer"
                 variant={streamLive ? 'filled' : 'outlined'}
-                
               />
               <Tooltip title="Toggle theme">
                 <IconButton color="inherit" onClick={() => setDarkMode((prev) => !prev)}>
@@ -203,6 +219,45 @@ function App() {
             </Stack>
           </Toolbar>
         </AppBar>
+
+        <Menu
+          anchorEl={menuAnchorEl}
+          open={mobileMenuOpen}
+          onClose={handleMenuClose}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          keepMounted
+        >
+          <Stack spacing={1.5} sx={{ p: 2, minWidth: 240 }}>
+            <Chip
+              label={wsConnected ? 'WebSocket Live' : 'WebSocket Offline'}
+              color={wsConnected ? 'success' : 'default'}
+              variant={wsConnected ? 'filled' : 'outlined'}
+            />
+            <Chip
+              label={twitchConnected ? 'Twitch Bot Connected' : 'Twitch Bot Offline'}
+              color={twitchConnected ? 'success' : 'warning'}
+              icon={<SportsEsportsIcon />}
+              variant={twitchConnected ? 'filled' : 'outlined'}
+            />
+            <Chip
+              label={streamLive ? 'Channel Live' : 'Channel Offline'}
+              color={streamLive ? 'info' : 'default'}
+              icon={<LiveTvIcon />}
+              clickable={Boolean(twitchChannel)}
+              component={twitchChannel ? 'a' : 'div'}
+              href={twitchChannel ? `https://twitch.tv/${twitchChannel}` : undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant={streamLive ? 'filled' : 'outlined'}
+            />
+            <Tooltip title="Toggle theme">
+              <IconButton color="inherit" onClick={() => setDarkMode((prev) => !prev)}>
+                {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        </Menu>
 
         <Container maxWidth="lg" sx={{ py: 4 }}>
           <PriceDisplay
