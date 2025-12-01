@@ -8,22 +8,35 @@ from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorCollection
 
 from .config import settings
-from .db import close_client, get_database
+from .db import close_client, ensure_database_connection, get_database
 from .stonks_state import StonksState
 from .twitch_client import TwitchClient
 from .twitch_helix_client import TwitchHelixClient
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("twitch_stonks")
+
+DEFAULT_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+AZURE_STATIC_ORIGIN_REGEX = r"https://.*\\.azurestaticapps\\.net"
 
 app = FastAPI(title="Twitch Stonks")
+allowed_origins = settings.allowed_origins or DEFAULT_ALLOWED_ORIGINS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_origin_regex=AZURE_STATIC_ORIGIN_REGEX,
 )
+logger.info("Configured CORS for origins: %s", allowed_origins)
 
 
 RANGE_MAP = {
@@ -47,6 +60,7 @@ def get_collection() -> AsyncIOMotorCollection:
 
 @app.on_event("startup")
 async def startup_event() -> None:
+    await ensure_database_connection(settings.mongo_uri)
     collection = get_collection()
     state = StonksState(
         collection=collection,
