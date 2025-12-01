@@ -19,11 +19,11 @@ import getTheme from './theme'
 import { ThemeProvider } from '@mui/material/styles'
 import './App.css'
 
-const apiBaseUrl = "twitchstonks-api-fcaphpe0drezf2du.eastus2-01.azurewebsites.net"
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 function App() {
   const [dataPoints, setDataPoints] = useState([])
-  const [selectedRange, setSelectedRange] = useState('3days')
+  const [selectedRange, setSelectedRange] = useState('today')
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [wsConnected, setWsConnected] = useState(false)
   const [twitchConnected, setTwitchConnected] = useState(false)
@@ -43,7 +43,7 @@ function App() {
       return apiBaseUrl.replace('https', 'wss') + '/ws'
     }
     return apiBaseUrl.replace('http', 'ws') + '/ws'
-  }, [apiBaseUrl])
+  }, [])
 
   const loadHistory = async (range) => {
     setLoadingHistory(true)
