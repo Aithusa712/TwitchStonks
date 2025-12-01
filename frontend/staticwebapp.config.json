@@ -4,6 +4,10 @@
       "route": "/ws",
       "allowedRoles": ["anonymous"]
     },
+        {
+      "route": "/ws/*",
+      "allowedRoles": ["anonymous"]
+    },
     {
       "route": "/api/*",
       "allowedRoles": ["anonymous"]
@@ -11,8 +15,7 @@
   ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/ws", "/api/*", "/*.{js,css,png,jpg,ico,svg}"]
-  },
+    "exclude": ["/ws", "/ws/*", "/api/*", "/*.{js,css,png,jpg,ico,svg}"]  },
   "platform": {
     "apiRuntime": "node:18"
   },

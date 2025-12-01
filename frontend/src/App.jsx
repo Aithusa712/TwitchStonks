@@ -19,7 +19,7 @@ import getTheme from './theme'
 import { ThemeProvider } from '@mui/material/styles'
 import './App.css'
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || window.location.origin).replace(/\/$/, '')
+const apiBaseUrl = "twitchstonks-api-fcaphpe0drezf2du.eastus2-01.azurewebsites.net"
 
 function App() {
   const [dataPoints, setDataPoints] = useState([])
