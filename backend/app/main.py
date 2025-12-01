@@ -24,6 +24,7 @@ DEFAULT_ALLOWED_ORIGINS = [
     "https://localhost:5173",
     "http://127.0.0.1:5173",
     "https://gray-plant-0d92e610f.3.azurestaticapps.net",
+    "https://www.stonkstracker.live",
 ]
 AZURE_STATIC_ORIGIN_REGEX = r"https://.*\\.azurestaticapps\\.net"
 
