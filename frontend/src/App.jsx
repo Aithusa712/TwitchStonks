@@ -149,19 +149,29 @@ function App() {
       <CssBaseline />
       <Box className="app" sx={{ minHeight: '100vh', background }}>
         <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Toolbar sx={{ justifyContent: 'space-between', gap: 2 }}>
-            <Stack direction="row" spacing={2} alignItems="center">
+          <Toolbar
+            sx={{
+              justifyContent: 'space-between',
+              gap: 2,
+              flexWrap: 'wrap',
+              alignItems: { xs: 'flex-start', sm: 'center' },
+            }}
+          >
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0 }}>
               <SignalCellularAltIcon color="primary" sx={{ fontSize: 36 }} />
               <Stack>
                 <Typography variant="h5" fontWeight={800}>
                   Twitch Stonks
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Real-time chat sentiment powering a live stock price.
-                </Typography>
               </Stack>
             </Stack>
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1.5}
+              alignItems={{ xs: 'flex-start', md: 'center' }}
+              justifyContent="flex-end"
+              sx={{ minWidth: { xs: '100%', md: 'auto' } }}
+            >
               <Chip
                 label={wsConnected ? 'WebSocket Live' : 'WebSocket Offline'}
                 color={wsConnected ? 'success' : 'default'}
@@ -204,7 +214,7 @@ function App() {
           <Grid container spacing={3} sx={{ mb: 2 }}>
             <Grid item xs={12} md={3}>
               <StatsCard
-                title={`${upKeyword} Mentions`}
+                title={upKeyword}
                 value={upMentions}
                 description={`Current ${tickIntervalMinutes}-minute window`}
                 color="success.main"
@@ -212,7 +222,7 @@ function App() {
             </Grid>
             <Grid item xs={12} md={3}>
               <StatsCard
-                title={`${downKeyword} Mentions`}
+                title={downKeyword}
                 value={downMentions}
                 description={`Current ${tickIntervalMinutes}-minute window`}
                 color="error.main"
@@ -235,7 +245,7 @@ function App() {
             sx={{
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               mb: 2,
               flexWrap: 'wrap',
               gap: 2,
@@ -244,9 +254,6 @@ function App() {
             <Stack spacing={0.5}>
               <Typography variant="h5" fontWeight={700}>
                 Price history
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Aggregated snapshots powered by MongoDB time-series data.
               </Typography>
             </Stack>
             <TimeRangeSelector value={selectedRange} onChange={setSelectedRange} />
@@ -263,13 +270,6 @@ function App() {
             )}
           </Box>
 
-          <Divider sx={{ my: 3, opacity: 0.4 }} />
-
-          <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
-            <Typography variant="body2">
-              Listening for chat keywords every moment. Ticker executes independently every 30 minutes, even if Twitch is down.
-            </Typography>
-          </Box>
         </Container>
       </Box>
     </ThemeProvider>

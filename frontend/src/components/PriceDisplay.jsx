@@ -10,8 +10,13 @@ function PriceDisplay({ price, changePercent, channelName }) {
   return (
     <Card sx={{ mb: 3, boxShadow: 10, background: 'linear-gradient(135deg, #312e81 0%, #7c3aed 100%)' }}>
       <CardContent>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Stack spacing={0.5}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={2}
+        >
+          <Stack spacing={0.5} sx={{ minWidth: 0 }}>
             <Typography variant="overline" color="rgba(255,255,255,0.8)">
               Current Price
             </Typography>
@@ -25,7 +30,7 @@ function PriceDisplay({ price, changePercent, channelName }) {
               Updated every 30 minutes from Twitch chat momentum.
             </Typography>
           </Stack>
-          <Stack alignItems="flex-end">
+          <Stack alignItems={{ xs: 'flex-start', sm: 'flex-end' }} spacing={0.5}>
             <TrendingUpIcon sx={{ color: '#fff', fontSize: 42, mb: 1 }} />
             <Typography variant="h6" sx={{ color }}>
               {label} {Math.abs(changePercent).toFixed(2)}%
