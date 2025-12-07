@@ -22,7 +22,6 @@ class PricePoint:
     def to_db(self) -> Dict[str, object]:
         return {
             "timestamp": self.timestamp,
-            "price": self.price,
             "up_count": self.up_count,
             "down_count": self.down_count,
         }
@@ -50,6 +49,7 @@ class StonksState:
         self.down_keyword = down_keyword.lower()
         self.tick_interval_minutes = tick_interval_minutes
         self.tick_interval_seconds = tick_interval_minutes * 60
+        self.initial_price = initial_price
         self.current_price = initial_price
         self._up_counter = 0
         self._down_counter = 0
@@ -91,24 +91,7 @@ class StonksState:
     async def start(self) -> None:
         if self._running:
             return
-        latest = await self.collection.find_one(sort=[("timestamp", -1)])
-        if latest and "price" in latest:
-            try:
-                self.current_price = float(latest["price"])
-                logger.info(
-                    "Starting with previous price from database: %.2f",
-                    self.current_price,
-                )
-            except (TypeError, ValueError):
-                logger.warning(
-                    "Previous price found in database but invalid, using initial price: %.2f",
-                    self.current_price,
-                )
-        else:
-            logger.info(
-                "No previous price found in database, using initial price: %.2f",
-                self.current_price,
-            )
+        await self._load_price_from_history()
         self._running = True
         logger.info("Starting ticker loop with interval %.2f minutes", self.tick_interval_minutes)
         self._ticker_task = asyncio.create_task(self._ticker_loop())
@@ -163,6 +146,39 @@ class StonksState:
         await self._broadcast(point)
         await self._broadcast_live_counters()
 
+    async def _load_price_from_history(self) -> None:
+        pipeline = [
+            {
+                "$group": {
+                    "_id": None,
+                    "total_up": {"$sum": {"$ifNull": ["$up_count", 0]}},
+                    "total_down": {"$sum": {"$ifNull": ["$down_count", 0]}},
+                }
+            }
+        ]
+        cursor = self.collection.aggregate(pipeline)
+        totals = await cursor.to_list(length=1)
+        if totals:
+            total_up = totals[0].get("total_up", 0) or 0
+            total_down = totals[0].get("total_down", 0) or 0
+            computed_price = self._calculate_price(total_up, total_down)
+            self.current_price = computed_price
+            logger.info(
+                "Starting with computed price from historical counts: %.2f (up=%s, down=%s)",
+                self.current_price,
+                total_up,
+                total_down,
+            )
+        else:
+            logger.info(
+                "No previous price found in database, using initial price: %.2f",
+                self.current_price,
+            )
+
+    def _calculate_price(self, up_total: int, down_total: int) -> float:
+        price_change = (up_total * 0.5) - (down_total * 0.5)
+        return max(0.0, self.initial_price + price_change)
+
     async def _broadcast(self, point: PricePoint) -> None:
         payload = {
             **point.to_json(),
@@ -207,27 +223,32 @@ class StonksState:
         await websocket.accept()
         self._websockets.append(websocket)
         latest = await self.collection.find_one(sort=[("timestamp", -1)])
+        latest_ts = datetime.now(timezone.utc)
+        latest_up = 0
+        latest_down = 0
         if latest:
             latest.pop("_id", None)
-            latest_ts = latest.get("timestamp")
-            if isinstance(latest_ts, str):
-                ts_value = datetime.fromisoformat(latest_ts)
-            elif latest_ts is None:
-                ts_value = datetime.now(timezone.utc)
+            raw_ts = latest.get("timestamp")
+            if isinstance(raw_ts, str):
+                latest_ts = datetime.fromisoformat(raw_ts)
+            elif raw_ts is None:
+                latest_ts = datetime.now(timezone.utc)
             else:
-                ts_value = latest_ts
-            if ts_value.tzinfo is None:
-                ts_value = ts_value.replace(tzinfo=timezone.utc)
-            latest_payload = {
-                "timestamp": ts_value.isoformat(),
-                "price": latest.get("price", 0.0),
-                "up_count": latest.get("up_count", 0),
-                "down_count": latest.get("down_count", 0),
-                "next_tick_at": self.next_tick_at.isoformat(),
-                "twitch_connected": self.twitch_connected,
-                "stream_live": self.stream_live,
-            }
-            await websocket.send_text(json.dumps(latest_payload))
+                latest_ts = raw_ts
+            if latest_ts.tzinfo is None:
+                latest_ts = latest_ts.replace(tzinfo=timezone.utc)
+            latest_up = int(latest.get("up_count", 0) or 0)
+            latest_down = int(latest.get("down_count", 0) or 0)
+        latest_payload = {
+            "timestamp": latest_ts.isoformat(),
+            "price": self.current_price,
+            "up_count": latest_up,
+            "down_count": latest_down,
+            "next_tick_at": self.next_tick_at.isoformat(),
+            "twitch_connected": self.twitch_connected,
+            "stream_live": self.stream_live,
+        }
+        await websocket.send_text(json.dumps(latest_payload))
         await websocket.send_text(
             json.dumps(
                 {

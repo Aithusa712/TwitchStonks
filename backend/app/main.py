@@ -142,41 +142,62 @@ async def history(
         raise HTTPException(status_code=400, detail="Invalid range")
     start_time = datetime.now(timezone.utc) - RANGE_MAP[range]
     unit = "hour" if RANGE_MAP[range].days <= AGGREGATE_HOURLY_MAX_DAYS else "day"
-
-    pipeline = [
-        {"$match": {"timestamp": {"$gte": start_time}}},
-        {"$sort": {"timestamp": 1}},
+    base_pipeline = [
+        {"$match": {"timestamp": {"$lt": start_time}}},
         {
             "$group": {
-                "_id": {
-                    "$dateTrunc": {
-                        "date": "$timestamp",
-                        "unit": unit,
-                        "timezone": "UTC",
-                    }
-                },
-                "price": {"$last": "$price"},
-                "up_count": {"$sum": "$up_count"},
-                "down_count": {"$sum": "$down_count"},
+                "_id": None,
+                "total_up": {"$sum": {"$ifNull": ["$up_count", 0]}},
+                "total_down": {"$sum": {"$ifNull": ["$down_count", 0]}},
             }
         },
-        {
-            "$project": {
-                "_id": 0,
-                "timestamp": "$_id",
-                "price": 1,
-                "up_count": 1,
-                "down_count": 1,
-            }
-        },
-        {"$sort": {"timestamp": 1}},
     ]
+    base_cursor = collection.aggregate(base_pipeline)
+    base_totals = await base_cursor.to_list(length=1)
+    base_up = base_totals[0].get("total_up", 0) if base_totals else 0
+    base_down = base_totals[0].get("total_down", 0) if base_totals else 0
+    base_price = max(0.0, settings.initial_price + ((base_up - base_down) * 0.5))
 
-    cursor = collection.aggregate(pipeline)
-    results: List[dict[str, Any]] = []
+    counts_by_bucket: dict[datetime, dict[str, int]] = {}
+
+    def normalize_timestamp(raw_ts: Any) -> datetime:
+        if isinstance(raw_ts, str):
+            ts_value = datetime.fromisoformat(raw_ts)
+        elif raw_ts is None:
+            ts_value = datetime.now(timezone.utc)
+        else:
+            ts_value = raw_ts
+        if ts_value.tzinfo is None:
+            ts_value = ts_value.replace(tzinfo=timezone.utc)
+        return ts_value.astimezone(timezone.utc)
+
+    def truncate_timestamp(ts_value: datetime) -> datetime:
+        if unit == "hour":
+            return ts_value.replace(minute=0, second=0, microsecond=0)
+        return ts_value.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    cursor = collection.find({"timestamp": {"$gte": start_time}}).sort("timestamp", 1)
     async for doc in cursor:
-        doc["timestamp"] = doc["timestamp"].replace(tzinfo=timezone.utc).isoformat()
-        results.append(doc)
+        ts_value = normalize_timestamp(doc.get("timestamp"))
+        bucket = truncate_timestamp(ts_value)
+        counts = counts_by_bucket.setdefault(bucket, {"up": 0, "down": 0})
+        counts["up"] += int(doc.get("up_count", 0) or 0)
+        counts["down"] += int(doc.get("down_count", 0) or 0)
+
+    price = base_price
+    results: List[dict[str, Any]] = []
+    for bucket_ts in sorted(counts_by_bucket.keys()):
+        counts = counts_by_bucket[bucket_ts]
+        price = max(0.0, price + ((counts["up"] - counts["down"]) * 0.5))
+        results.append(
+            {
+                "timestamp": bucket_ts.replace(tzinfo=timezone.utc).isoformat(),
+                "price": price,
+                "up_count": counts["up"],
+                "down_count": counts["down"],
+            }
+        )
+
     return results
 
 
