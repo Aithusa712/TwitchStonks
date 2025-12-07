@@ -37,6 +37,7 @@ function App() {
   const [downKeyword, setDownKeyword] = useState('Down')
   const [nextTickAt, setNextTickAt] = useState(null)
   const [tickIntervalMinutes, setTickIntervalMinutes] = useState(30)
+  const [currentPrice, setCurrentPrice] = useState(0)
   const [liveCounts, setLiveCounts] = useState({ up_count: 0, down_count: 0 })
   const [darkMode, setDarkMode] = useState(true)
 
@@ -72,6 +73,9 @@ function App() {
       }
       if (status.tick_interval_minutes) {
         setTickIntervalMinutes(status.tick_interval_minutes)
+      }
+      if (status.current_price !== undefined) {
+        setCurrentPrice(status.current_price)
       }
       if (status.up_keyword) {
         setUpKeyword(status.up_keyword)
@@ -111,9 +115,14 @@ function App() {
         if (payload.next_tick_at) {
           setNextTickAt(new Date(payload.next_tick_at))
         }
-        if (payload.type === 'tick' && payload.timestamp) {
-          const livePoint = { ...payload, timestamp: new Date(payload.timestamp) }
-          setDataPoints((prev) => [...prev, livePoint])
+        if (payload.type === 'tick') {
+          if (payload.timestamp) {
+            const livePoint = { ...payload, timestamp: new Date(payload.timestamp) }
+            setDataPoints((prev) => [...prev, livePoint])
+          }
+          if (payload.price !== undefined) {
+            setCurrentPrice(payload.price)
+          }
         }
         if (payload.type === 'live_counts') {
           setLiveCounts({
@@ -132,9 +141,20 @@ function App() {
 
   const latest = dataPoints[dataPoints.length - 1]
   const previous = dataPoints[dataPoints.length - 2]
-  const price = latest?.price ?? 0
-  const changePercent = previous && previous.price
-    ? ((price - previous.price) / previous.price) * 100
+  const now = new Date()
+  const recencyWindowMinutes = tickIntervalMinutes ? tickIntervalMinutes * 2 : 60
+  const recencyWindowMs = recencyWindowMinutes * 60 * 1000
+  const hasRecentDataPoint = latest?.timestamp
+    ? now.getTime() - new Date(latest.timestamp).getTime() <= recencyWindowMs
+    : false
+
+  const price = hasRecentDataPoint
+    ? latest?.price ?? currentPrice
+    : currentPrice ?? latest?.price ?? 0
+
+  const baselinePrice = hasRecentDataPoint ? previous?.price : latest?.price ?? previous?.price
+  const changePercent = baselinePrice
+    ? ((price - baselinePrice) / baselinePrice) * 100
     : 0
   const upMentions = liveCounts.up_count ?? 0
   const downMentions = liveCounts.down_count ?? 0
